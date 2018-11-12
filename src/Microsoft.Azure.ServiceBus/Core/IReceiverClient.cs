@@ -64,10 +64,10 @@ namespace Microsoft.Azure.ServiceBus.Core
         void RegisterMessageHandler(Func<Message, CancellationToken, Task> handler, MessageHandlerOptions messageHandlerOptions);
 
         /// <summary>
-        /// Stop receiving messages from the entity. Cancels the receiver pump token source and waits <see cref="MessageReceivePump.StopPump()"/>
+        /// Stop receiving messages from the entity. Cancels the receiver pump token source and waits <see cref="MessageReceivePump.StopPumpAsync()"/>
         /// until no messages been processing. 
         /// </summary>
-        void StopReceiving();
+        Task StopReceivingAsync();
 
         /// <summary>
         /// Completes a <see cref="Message"/> using its lock token. This will delete the message from the queue.

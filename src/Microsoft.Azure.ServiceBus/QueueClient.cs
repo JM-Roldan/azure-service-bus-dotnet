@@ -448,7 +448,7 @@ namespace Microsoft.Azure.ServiceBus
 		/// <summary>
         /// 
         /// </summary>
-		public void StopReceiving()
+		public Task StopReceivingAsync()
         {
             throw new NotImplementedException();
         }

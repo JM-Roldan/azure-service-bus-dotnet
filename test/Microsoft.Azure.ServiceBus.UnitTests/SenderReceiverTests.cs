@@ -122,7 +122,7 @@ namespace Microsoft.Azure.ServiceBus.UnitTests
                 new MessageHandlerOptions(ExceptionReceivedHandler) { MaxConcurrentCalls = 4, AutoComplete = false});
 
                 Thread.Sleep(1900);
-                receiver.StopReceiving();              
+                await receiver.StopReceivingAsync().ConfigureAwait(false);              
                 Assert.Equal(4, count);                
 				
                 receiver.RegisterMessageHandler(
@@ -156,17 +156,17 @@ namespace Microsoft.Azure.ServiceBus.UnitTests
         [Theory]
         [MemberData(nameof(TestPermutations))]
         [DisplayTestMethodName]
-        void StopReceivingShouldThrowWhenNoPumpRegistered(string queueName)
+        async Task StopReceivingShouldThrowWhenNoPumpRegistered(string queueName)
         {
             var receiver = new MessageReceiver(TestUtility.NamespaceConnectionString, queueName, receiveMode: ReceiveMode.PeekLock);
 
-            Assert.Throws<NullReferenceException>(() => receiver.StopReceiving());
+            await Assert.ThrowsAsync<NullReferenceException>(async () => await receiver.StopReceivingAsync().ConfigureAwait(false));
         }
 
         [Theory]
         [MemberData(nameof(TestPermutations))]
         [DisplayTestMethodName]
-        void StopReceivingShouldThrowWhenAlreadyStopped(string queueName)
+        async Task StopReceivingShouldThrowWhenAlreadyStopped(string queueName)
         {
             var receiver = new MessageReceiver(TestUtility.NamespaceConnectionString, queueName, receiveMode: ReceiveMode.PeekLock);
             receiver.RegisterMessageHandler(
@@ -176,9 +176,9 @@ namespace Microsoft.Azure.ServiceBus.UnitTests
                 },
                 new MessageHandlerOptions(ExceptionReceivedHandler) { MaxConcurrentCalls = 4, AutoComplete = false });
 
-            receiver.StopReceiving();
-			
-            Assert.Throws<ObjectDisposedException>(() => receiver.StopReceiving());
+            await receiver.StopReceivingAsync().ConfigureAwait(false);
+
+            await Assert.ThrowsAsync<ObjectDisposedException>(async () => await receiver.StopReceivingAsync().ConfigureAwait(false));
         }
 
         [Theory]
@@ -187,8 +187,8 @@ namespace Microsoft.Azure.ServiceBus.UnitTests
         async Task StopReceivingShouldThrowIfReceiverHasAlreadyBeenClosed(string queueName)
         {
             var receiver = new MessageReceiver(TestUtility.NamespaceConnectionString, queueName, receiveMode: ReceiveMode.PeekLock);
-            await receiver.CloseAsync();
-            Assert.Throws<ObjectDisposedException>(() => receiver.StopReceiving());
+            await receiver.CloseAsync().ConfigureAwait(false);
+            await Assert.ThrowsAsync<ObjectDisposedException>(async () => await receiver.StopReceivingAsync().ConfigureAwait(false));
         }
 
         [Theory]
