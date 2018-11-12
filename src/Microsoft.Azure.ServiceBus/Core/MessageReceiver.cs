@@ -900,14 +900,14 @@ namespace Microsoft.Azure.ServiceBus.Core
         }
 
         /// <summary>
-        /// Stop receiving messages from the entity. Cancels the receiver pump token source and waits <see cref="MessageReceivePump.StopPump()"/>
+        /// Stop receiving messages from the entity. Cancels the receiver pump token source and waits <see cref="MessageReceivePump.StopPumpAsync()"/>
         /// until no messages been processing. 
         /// </summary>
-        public void StopReceiving()
+        public async Task StopReceivingAsync()
         {
             this.ThrowIfClosed();
             this.receivePumpCancellationTokenSource.Cancel();
-            this.receivePump.StopPump();
+            await this.receivePump.StopPumpAsync();
             this.receivePumpCancellationTokenSource.Dispose();
             this.receivePump = null;
         }

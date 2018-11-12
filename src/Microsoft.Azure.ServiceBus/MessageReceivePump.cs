@@ -43,9 +43,11 @@ namespace Microsoft.Azure.ServiceBus
             TaskExtensionHelper.Schedule(() => this.MessagePumpTaskAsync());
         }
 
-		public void StopPump()
+		public Task StopPumpAsync()
         {
-			while(this.activeMessages > 0) { }
+			return Task.Run(() => {
+				while(this.activeMessages > 0){}
+			});
         }
 
 		void IncreaseActiveMessages()
