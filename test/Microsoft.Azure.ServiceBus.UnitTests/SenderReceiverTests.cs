@@ -22,6 +22,12 @@ namespace Microsoft.Azure.ServiceBus.UnitTests
             new object[] {TestConstants.PartitionedQueueName}
         };
 
+        public static IEnumerable<object[]> TestPermutationsSession => new object[][]
+        {
+            new object[] {TestConstants.SessionNonPartitionedQueueName},
+            new object[] {TestConstants.SessionPartitionedQueueName}
+        };
+
         [Theory]
         [MemberData(nameof(TestPermutations))]
         [DisplayTestMethodName]
@@ -109,8 +115,8 @@ namespace Microsoft.Azure.ServiceBus.UnitTests
             var count = 0;
 
             try
-            {	
-                await TestUtility.SendMessagesAsync(sender, 12);             
+            {
+                await TestUtility.SendMessagesAsync(sender, 12);
 
                 receiver.RegisterMessageHandler(
                 async (receivedMessage, token) =>
@@ -119,16 +125,16 @@ namespace Microsoft.Azure.ServiceBus.UnitTests
                     Thread.Sleep(2000);
                     await receiver.CompleteAsync(new[] { receivedMessage.SystemProperties.LockToken });
                 },
-                new MessageHandlerOptions(ExceptionReceivedHandler) { MaxConcurrentCalls = 4, AutoComplete = false});
+                new MessageHandlerOptions(ExceptionReceivedHandler) { MaxConcurrentCalls = 4, AutoComplete = false });
 
                 Thread.Sleep(1900);
-                await receiver.StopReceivingAsync().ConfigureAwait(false);              
-                Assert.Equal(4, count);                
-				
+                await receiver.StopReceivingAsync().ConfigureAwait(false);
+                Assert.Equal(4, count);
+
                 receiver.RegisterMessageHandler(
                 async (receivedMessage, token) =>
                 {
-                    Interlocked.Increment(ref count);                    
+                    Interlocked.Increment(ref count);
                     await receiver.CompleteAsync(new[] { receivedMessage.SystemProperties.LockToken });
                 },
                 new MessageHandlerOptions(base.ExceptionReceivedHandler) { MaxConcurrentCalls = 4, AutoComplete = false });
@@ -151,44 +157,6 @@ namespace Microsoft.Azure.ServiceBus.UnitTests
                 await sender.CloseAsync().ConfigureAwait(false);
                 await receiver.CloseAsync().ConfigureAwait(false);
             }
-        }
-
-        [Theory]
-        [MemberData(nameof(TestPermutations))]
-        [DisplayTestMethodName]
-        async Task StopReceivingShouldThrowWhenNoPumpRegistered(string queueName)
-        {
-            var receiver = new MessageReceiver(TestUtility.NamespaceConnectionString, queueName, receiveMode: ReceiveMode.PeekLock);
-
-            await Assert.ThrowsAsync<NullReferenceException>(async () => await receiver.StopReceivingAsync().ConfigureAwait(false));
-        }
-
-        [Theory]
-        [MemberData(nameof(TestPermutations))]
-        [DisplayTestMethodName]
-        async Task StopReceivingShouldThrowWhenAlreadyStopped(string queueName)
-        {
-            var receiver = new MessageReceiver(TestUtility.NamespaceConnectionString, queueName, receiveMode: ReceiveMode.PeekLock);
-            receiver.RegisterMessageHandler(
-                async (receivedMessage, token) =>
-                {
-                    await Task.CompletedTask;                   
-                },
-                new MessageHandlerOptions(ExceptionReceivedHandler) { MaxConcurrentCalls = 4, AutoComplete = false });
-
-            await receiver.StopReceivingAsync().ConfigureAwait(false);
-
-            await Assert.ThrowsAsync<ObjectDisposedException>(async () => await receiver.StopReceivingAsync().ConfigureAwait(false));
-        }
-
-        [Theory]
-        [MemberData(nameof(TestPermutations))]
-        [DisplayTestMethodName]
-        async Task StopReceivingShouldThrowIfReceiverHasAlreadyBeenClosed(string queueName)
-        {
-            var receiver = new MessageReceiver(TestUtility.NamespaceConnectionString, queueName, receiveMode: ReceiveMode.PeekLock);
-            await receiver.CloseAsync().ConfigureAwait(false);
-            await Assert.ThrowsAsync<ObjectDisposedException>(async () => await receiver.StopReceivingAsync().ConfigureAwait(false));
         }
 
         [Theory]
@@ -469,7 +437,7 @@ namespace Microsoft.Azure.ServiceBus.UnitTests
 
                 var recivedMessage = await receiver.ReceiveAsync().ConfigureAwait(false);
                 Assert.True(Encoding.UTF8.GetString(recivedMessage.Body) == Encoding.UTF8.GetString(messageBody));
-            
+
                 var connection = sender.ServiceBusConnection;
                 Assert.Throws<ObjectDisposedException>(() => new MessageSender(connection, TestConstants.PartitionedQueueName));
             }
@@ -506,7 +474,7 @@ namespace Microsoft.Azure.ServiceBus.UnitTests
 
                 messageBody = Encoding.UTF8.GetBytes("Message 2");
                 message = new Message(messageBody);
-                await sender.SendAsync(message); 
+                await sender.SendAsync(message);
 
                 recivedMessage = await receiver.ReceiveAsync().ConfigureAwait(false);
                 Assert.True(Encoding.UTF8.GetString(recivedMessage.Body) == Encoding.UTF8.GetString(messageBody));
@@ -550,6 +518,67 @@ namespace Microsoft.Azure.ServiceBus.UnitTests
             {
                 await sender.CloseAsync().ConfigureAwait(false);
                 await receiver.CloseAsync().ConfigureAwait(false);
+            }
+        }
+
+        [Theory]
+        [MemberData(nameof(TestPermutationsSession))]
+        [DisplayTestMethodName]
+        async Task QueueClientShouldBeAbleToStopTheMessagePump(string queueName, int sessions = 2, int messagesPerSession = 3)
+        {
+            var sender = new MessageSender(TestUtility.NamespaceConnectionString, queueName);
+            var queueClient = new QueueClient(TestUtility.NamespaceConnectionString, queueName);
+
+            var count = 0;
+            var messagesWhenStopping = 0;
+            var totalReceived = 0;
+
+            try
+            {
+                await TestUtility.SendSessionMessagesAsync(sender, sessions, messagesPerSession).ConfigureAwait(false);
+
+                queueClient.RegisterSessionHandler(
+                    async (messageSession, receivedMessage, token) =>
+                    {
+                        Interlocked.Increment(ref count);
+                        Thread.Sleep(3000);
+                        await messageSession.CompleteAsync(new[] { receivedMessage.SystemProperties.LockToken });
+                    },
+                    new SessionHandlerOptions(ExceptionReceivedHandler) { MaxConcurrentAcceptSessionCalls = 1, MaxConcurrentSessions = 2, AutoComplete = false });
+
+                Thread.Sleep(5000);
+                await queueClient.StopReceivingAsync().ConfigureAwait(false);
+                messagesWhenStopping = count;
+
+                queueClient.RegisterSessionHandler(
+                async (messageSession, receivedMessage, token) =>
+                {
+                    Interlocked.Increment(ref count);
+                    await messageSession.CompleteAsync(new[] { receivedMessage.SystemProperties.LockToken });
+                },
+                new SessionHandlerOptions(ExceptionReceivedHandler) { MaxConcurrentAcceptSessionCalls = 1, MaxConcurrentSessions = 2, AutoComplete = false });
+
+                var stopwatch = Stopwatch.StartNew();
+                while (stopwatch.Elapsed.TotalSeconds <= 60)
+                {
+                    if (count == 6)
+                    {
+                        TestUtility.Log($"All messages Received.");
+                        break;
+                    }
+                    await Task.Delay(TimeSpan.FromSeconds(5));
+                }
+                totalReceived = count;
+
+            }
+            finally
+            {
+                await queueClient.StopReceivingAsync().ConfigureAwait(false);
+                await sender.CloseAsync().ConfigureAwait(false);
+                await queueClient.CloseAsync().ConfigureAwait(false);
+                queueClient = null;
+                Assert.Equal(4, messagesWhenStopping);
+                Assert.Equal(messagesPerSession * sessions, totalReceived);
             }
         }
     }

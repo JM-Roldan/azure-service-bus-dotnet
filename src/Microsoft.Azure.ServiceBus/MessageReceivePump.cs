@@ -167,8 +167,7 @@ namespace Microsoft.Azure.ServiceBus
             try
             {
                 MessagingEventSource.Log.MessageReceiverPumpUserCallbackStart(this.messageReceiver.ClientId, message);
-                await this.onMessageCallback(message, this.pumpCancellationToken).ConfigureAwait(false);
-                this.DecreaseActiveMessages();
+                await this.onMessageCallback(message, this.pumpCancellationToken).ConfigureAwait(false);                
                 MessagingEventSource.Log.MessageReceiverPumpUserCallbackStop(this.messageReceiver.ClientId, message);
             }
             catch (Exception exception)
@@ -187,8 +186,7 @@ namespace Microsoft.Azure.ServiceBus
                     this.diagnosticSource.ReportException(exception);
                 }
                 // AbandonMessageIfNeededAsync should take care of not throwing exception
-                this.maxConcurrentCallsSemaphoreSlim.Release();
-                this.DecreaseActiveMessages();
+                this.maxConcurrentCallsSemaphoreSlim.Release();                
 
                 return;
             }
@@ -197,6 +195,7 @@ namespace Microsoft.Azure.ServiceBus
                 renewLockCancellationTokenSource?.Cancel();
                 renewLockCancellationTokenSource?.Dispose();
                 autoRenewLockCancellationTimer?.Dispose();
+                this.DecreaseActiveMessages();
             }
 
             // If we've made it this far, user callback completed fine. Complete message and Release semaphore.
