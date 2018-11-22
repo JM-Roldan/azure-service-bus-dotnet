@@ -905,11 +905,13 @@ namespace Microsoft.Azure.ServiceBus.Core
         /// </summary>
         public async Task StopReceivingAsync()
         {
-            this.ThrowIfClosed();
-            this.receivePumpCancellationTokenSource.Cancel();
-            await this.receivePump.StopPumpAsync();
-            this.receivePumpCancellationTokenSource.Dispose();
-            this.receivePump = null;
+			if(this.messageReceivePumpSyncLock != null && !this.IsClosedOrClosing)
+            {
+                this.receivePumpCancellationTokenSource.Cancel();
+                await this.receivePump.StopPumpAsync();
+                this.receivePumpCancellationTokenSource.Dispose();
+                this.receivePump = null;
+            }                    
         }
 
         /// <summary>

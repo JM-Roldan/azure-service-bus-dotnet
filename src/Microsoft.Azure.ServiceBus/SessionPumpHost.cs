@@ -29,11 +29,12 @@ namespace Microsoft.Azure.ServiceBus
 
         string ClientId { get; }
 
-        public void Close()
+        public async Task CloseAsync()
         {
             if (this.sessionReceivePump != null)
             {
                 this.sessionPumpCancellationTokenSource?.Cancel();
+                await this.sessionReceivePump.StopPumpAsync().ConfigureAwait(false);
                 this.sessionPumpCancellationTokenSource?.Dispose();
                 this.sessionReceivePump = null;
             }

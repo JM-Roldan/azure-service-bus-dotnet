@@ -21,6 +21,8 @@ namespace Microsoft.Azure.ServiceBus
         readonly SemaphoreSlim maxConcurrentSessionsSemaphoreSlim;
         readonly SemaphoreSlim maxPendingAcceptSessionsSemaphoreSlim;
         private readonly ServiceBusDiagnosticSource diagnosticSource;
+        int activeMessages = 0;
+        object activeMessageSyncLock;
 
         public SessionReceivePump(string clientId,
             ISessionClient client,
@@ -41,6 +43,7 @@ namespace Microsoft.Azure.ServiceBus
             this.maxConcurrentSessionsSemaphoreSlim = new SemaphoreSlim(this.sessionHandlerOptions.MaxConcurrentSessions);
             this.maxPendingAcceptSessionsSemaphoreSlim = new SemaphoreSlim(this.sessionHandlerOptions.MaxConcurrentAcceptSessionCalls);
             this.diagnosticSource = new ServiceBusDiagnosticSource(client.EntityPath, endpoint);
+            this.activeMessageSyncLock = new object();
         }
 
         ReceiveMode ReceiveMode { get; }
@@ -52,6 +55,30 @@ namespace Microsoft.Azure.ServiceBus
             {
                 TaskExtensionHelper.Schedule(this.SessionPumpTaskAsync);
             }
+        }
+
+		//STOP PUMP ASYNC
+		public Task StopPumpAsync()
+        {
+            return Task.Run(() => {
+                while (this.activeMessages > 0) { }
+            });
+        }
+
+        void IncreaseActiveMessages()
+        {
+            lock (activeMessageSyncLock)
+            {
+                this.activeMessages++;
+            };
+        }
+
+        void DecreaseActiveMessages()
+        {
+            lock (activeMessageSyncLock)
+            {
+                this.activeMessages--;
+            };
         }
 
         static void CancelAndDisposeCancellationTokenSource(CancellationTokenSource renewLockCancellationTokenSource)
@@ -189,7 +216,7 @@ namespace Microsoft.Azure.ServiceBus
             {
                 while (!this.pumpCancellationToken.IsCancellationRequested && !session.IsClosedOrClosing)
                 {
-                    Message message;
+                    Message message;                
                     try
                     {
                         message = await session.ReceiveAsync(this.sessionHandlerOptions.MessageWaitTimeout).ConfigureAwait(false);
@@ -222,6 +249,7 @@ namespace Microsoft.Azure.ServiceBus
 
                     try
                     {
+                        IncreaseActiveMessages();
                         // Set the timer
                         userCallbackTimer.Change(this.sessionHandlerOptions.MaxAutoRenewDuration,
                             TimeSpan.FromMilliseconds(-1));
@@ -229,7 +257,7 @@ namespace Microsoft.Azure.ServiceBus
                         try
                         {
                             processTask = this.userOnSessionCallback(session, message, this.pumpCancellationToken);
-                            await processTask.ConfigureAwait(false);
+                            await processTask.ConfigureAwait(false);							
                         }
                         catch (Exception exception)
                         {
@@ -263,7 +291,8 @@ namespace Microsoft.Azure.ServiceBus
                     }
                     finally
                     {
-                        this.diagnosticSource.ProcessSessionStop(activity, session, message, processTask?.Status);
+                        this.diagnosticSource.ProcessSessionStop(activity, session, message, processTask?.Status);                        
+                        DecreaseActiveMessages();
                     }
                 }
             }

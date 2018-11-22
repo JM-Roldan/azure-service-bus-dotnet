@@ -193,7 +193,7 @@ namespace Microsoft.Azure.ServiceBus.UnitTests.Diagnostics
 
             if (disposing)
             {
-                this.queueClient?.SessionPumpHost?.Close();
+                this.queueClient?.SessionPumpHost?.CloseAsync().Wait(TimeSpan.FromSeconds(maxWaitSec));
                 this.queueClient?.SessionClient.CloseAsync().Wait(TimeSpan.FromSeconds(maxWaitSec));
                 this.queueClient?.CloseAsync().Wait(TimeSpan.FromSeconds(maxWaitSec));
                 this.messageSession?.CloseAsync().Wait(TimeSpan.FromSeconds(maxWaitSec));

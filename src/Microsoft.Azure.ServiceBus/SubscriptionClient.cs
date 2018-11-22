@@ -422,9 +422,9 @@ namespace Microsoft.Azure.ServiceBus
 		/// <summary>
         /// 
         /// </summary>
-        public Task StopReceivingAsync()
+        public async Task StopReceivingAsync()
         {
-            throw new NotImplementedException();
+            await this.SessionPumpHost.CloseAsync().ConfigureAwait(false);
         }
 
         /// <summary>
@@ -639,7 +639,10 @@ namespace Microsoft.Azure.ServiceBus
                 await this.innerSubscriptionClient.CloseAsync().ConfigureAwait(false);
             }
 
-            this.sessionPumpHost?.Close();
+			if(this.SessionPumpHost != null)
+            {
+                await this.sessionPumpHost.CloseAsync().ConfigureAwait(false);
+            }            
 
             if (this.sessionClient != null)
             {
