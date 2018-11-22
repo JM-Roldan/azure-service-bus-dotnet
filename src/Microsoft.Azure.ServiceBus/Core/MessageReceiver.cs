@@ -905,7 +905,7 @@ namespace Microsoft.Azure.ServiceBus.Core
         /// </summary>
         public async Task StopReceivingAsync()
         {
-			if(this.messageReceivePumpSyncLock != null && !this.IsClosedOrClosing)
+			if(this.receivePump != null && !this.IsClosedOrClosing)
             {
                 this.receivePumpCancellationTokenSource.Cancel();
                 await this.receivePump.StopPumpAsync();

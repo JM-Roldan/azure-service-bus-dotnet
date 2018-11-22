@@ -23,10 +23,10 @@ namespace Microsoft.Azure.ServiceBus.UnitTests
         };
 
         public static IEnumerable<object[]> TestPermutationsSession => new object[][]
-{
+        {
             new object[] {TestConstants.SessionNonPartitionedQueueName},
             new object[] {TestConstants.SessionPartitionedQueueName}
-};
+        };
 
         [Theory]
         [MemberData(nameof(TestPermutations))]
@@ -157,34 +157,6 @@ namespace Microsoft.Azure.ServiceBus.UnitTests
                 await sender.CloseAsync().ConfigureAwait(false);
                 await receiver.CloseAsync().ConfigureAwait(false);
             }
-        }
-
-        [Theory]
-        [MemberData(nameof(TestPermutations))]
-        [DisplayTestMethodName]
-        async Task StopReceivingShouldThrowWhenNoPumpRegistered(string queueName)
-        {
-            var receiver = new MessageReceiver(TestUtility.NamespaceConnectionString, queueName, receiveMode: ReceiveMode.PeekLock);
-
-            await Assert.ThrowsAsync<NullReferenceException>(async () => await receiver.StopReceivingAsync().ConfigureAwait(false));
-        }
-
-        [Theory]
-        [MemberData(nameof(TestPermutations))]
-        [DisplayTestMethodName]
-        async Task StopReceivingShouldThrowWhenAlreadyStopped(string queueName)
-        {
-            var receiver = new MessageReceiver(TestUtility.NamespaceConnectionString, queueName, receiveMode: ReceiveMode.PeekLock);
-            receiver.RegisterMessageHandler(
-                async (receivedMessage, token) =>
-                {
-                    await Task.CompletedTask;
-                },
-                new MessageHandlerOptions(ExceptionReceivedHandler) { MaxConcurrentCalls = 4, AutoComplete = false });
-
-            await receiver.StopReceivingAsync().ConfigureAwait(false);
-
-            await Assert.ThrowsAsync<ObjectDisposedException>(async () => await receiver.StopReceivingAsync().ConfigureAwait(false));
         }
 
         [Theory]
