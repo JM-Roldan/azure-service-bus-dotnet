@@ -581,15 +581,5 @@ namespace Microsoft.Azure.ServiceBus.UnitTests
                 Assert.Equal(messagesPerSession * sessions, totalReceived);
             }
         }
-
-        [Theory]
-        [MemberData(nameof(TestPermutationsSession))]
-        [DisplayTestMethodName]
-        async Task QueueClientStopReceivingShouldThrowIfQueueClientHasAlreadyBeenClosed(string queueName)
-        {
-            var queueClient = new QueueClient(TestUtility.NamespaceConnectionString, queueName, receiveMode: ReceiveMode.PeekLock);
-            await queueClient.CloseAsync().ConfigureAwait(false);
-            await Assert.ThrowsAsync<ObjectDisposedException>(async () => await queueClient.StopReceivingAsync().ConfigureAwait(false));
-        }
     }
 }
