@@ -907,9 +907,9 @@ namespace Microsoft.Azure.ServiceBus.Core
         {
 			if(this.receivePump != null && !this.IsClosedOrClosing)
             {
-                this.receivePumpCancellationTokenSource.Cancel();
+                this.receivePumpCancellationTokenSource?.Cancel();
                 await this.receivePump.StopPumpAsync();
-                this.receivePumpCancellationTokenSource.Dispose();
+                this.receivePumpCancellationTokenSource?.Dispose();
                 this.receivePump = null;
             }                    
         }
