@@ -450,7 +450,8 @@ namespace Microsoft.Azure.ServiceBus
         /// </summary>
 		public async Task StopReceivingAsync()
         {
-            await SessionPumpHost.CloseAsync().ConfigureAwait(false);            
+            await SessionPumpHost.CloseAsync().ConfigureAwait(false);
+            await this.innerReceiver.StopReceivingAsync().ConfigureAwait(false);
         }
 
         /// <summary>
