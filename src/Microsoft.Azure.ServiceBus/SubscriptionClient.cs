@@ -425,6 +425,7 @@ namespace Microsoft.Azure.ServiceBus
         public async Task StopReceivingAsync()
         {
             await this.SessionPumpHost.CloseAsync().ConfigureAwait(false);
+            await this.innerSubscriptionClient.InnerReceiver.StopReceivingAsync().ConfigureAwait(false);
         }
 
         /// <summary>
