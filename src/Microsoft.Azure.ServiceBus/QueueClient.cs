@@ -445,13 +445,16 @@ namespace Microsoft.Azure.ServiceBus
             this.InnerReceiver.RegisterMessageHandler(handler, messageHandlerOptions);
         }
 
-		/// <summary>
+        /// <summary>
         /// 
         /// </summary>
-		public async Task StopReceivingAsync()
+        public async Task StopReceivingAsync()
         {
             await SessionPumpHost.CloseAsync().ConfigureAwait(false);
-            await this.innerReceiver.StopReceivingAsync().ConfigureAwait(false);
+            if (this.innerReceiver != null)
+            {
+                await this.innerReceiver.StopReceivingAsync().ConfigureAwait(false);
+            }
         }
 
         /// <summary>
