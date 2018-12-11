@@ -110,7 +110,7 @@ namespace Microsoft.Azure.ServiceBus
                 catch (Exception exception)
                 {
                     // Not reporting an ObjectDisposedException as we're stopping the pump
-                    if (!(exception is ObjectDisposedException && this.pumpCancellationToken.IsCancellationRequested))
+                    if (!(exception is ObjectDisposedException && this.pumpCancellationToken.IsCancellationRequested) && !(exception is OperationCanceledException))
                     {
                         MessagingEventSource.Log.MessageReceivePumpTaskException(this.messageReceiver.ClientId, string.Empty, exception);
                         await this.RaiseExceptionReceived(exception, ExceptionReceivedEventArgsAction.Receive).ConfigureAwait(false); 

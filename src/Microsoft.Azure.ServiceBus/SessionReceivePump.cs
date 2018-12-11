@@ -83,15 +83,29 @@ namespace Microsoft.Azure.ServiceBus
 
         static void CancelAndDisposeCancellationTokenSource(CancellationTokenSource renewLockCancellationTokenSource)
         {
-            renewLockCancellationTokenSource?.Cancel();
-            renewLockCancellationTokenSource?.Dispose();
-        }
+            try
+            {
+                renewLockCancellationTokenSource?.Cancel();
+                renewLockCancellationTokenSource?.Dispose();
+			}
+            catch (ObjectDisposedException)
+            {
+				// Ignore this race.
+            }
+		}
 
         static void OnUserCallBackTimeout(object state)
         {
             var renewCancellationTokenSource = (CancellationTokenSource)state;
-            renewCancellationTokenSource?.Cancel();
-            renewCancellationTokenSource?.Dispose();
+            try
+            {
+                renewCancellationTokenSource?.Cancel();
+                renewCancellationTokenSource?.Dispose();
+			}
+            catch (ObjectDisposedException)
+            {
+                // Ignore this race.
+            }
         }
 
         bool ShouldRenewSessionLock()
@@ -170,7 +184,7 @@ namespace Microsoft.Azure.ServiceBus
                         this.maxConcurrentSessionsSemaphoreSlim.Release();
                     }
 
-                    if (exception is ServiceBusTimeoutException)
+                    if (exception is ServiceBusTimeoutException || exception is OperationCanceledException)
                     {
                         await Task.Delay(Constants.NoMessageBackoffTimeSpan, this.pumpCancellationToken).ConfigureAwait(false);
                     }
