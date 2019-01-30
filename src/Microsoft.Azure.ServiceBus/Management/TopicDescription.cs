@@ -15,7 +15,6 @@ namespace Microsoft.Azure.ServiceBus.Management
         internal string path;
         TimeSpan defaultMessageTimeToLive = TimeSpan.MaxValue;
         TimeSpan autoDeleteOnIdle = TimeSpan.MaxValue;
-        AuthorizationRules authorizationRules = null;
         string userMetadata = null;
 
         /// <summary>
@@ -33,7 +32,7 @@ namespace Microsoft.Azure.ServiceBus.Management
         /// <remarks>
         /// This is the default value used when <see cref="Message.TimeToLive"/> is not set on a
         ///  message itself. Messages older than their TimeToLive value will expire and no longer be retained in the message store.
-        ///  Subscribers will be unable to receive expired messages. 
+        ///  Subscribers will be unable to receive expired messages.
         ///  Default value is <see cref="TimeSpan.MaxValue"/>.
         ///  </remarks>
         public TimeSpan DefaultMessageTimeToLive
@@ -88,7 +87,7 @@ namespace Microsoft.Azure.ServiceBus.Management
         /// The <see cref="TimeSpan"/> duration of duplicate detection history that is maintained by the service.
         /// </summary>
         /// <remarks>
-        /// The default value is 1 minute. Max value is 1 day and minimum is 20 seconds.
+        /// The default value is 1 minute. Max value is 7 days and minimum is 20 seconds.
         /// </remarks>
         public TimeSpan DuplicateDetectionHistoryTimeWindow
         {
@@ -108,7 +107,7 @@ namespace Microsoft.Azure.ServiceBus.Management
         /// <summary>
         /// Path of the topic relative to the namespace base address.
         /// </summary>
-        /// <remarks>Max length is 260 chars. Cannot start or end with a slash. 
+        /// <remarks>Max length is 260 chars. Cannot start or end with a slash.
         /// Cannot have restricted characters: '@','?','#','*'</remarks>
         public string Path
         {
@@ -123,22 +122,7 @@ namespace Microsoft.Azure.ServiceBus.Management
         /// <summary>
         /// The <see cref="AuthorizationRules"/> on the topic to control user access at entity level.
         /// </summary>
-        public AuthorizationRules AuthorizationRules
-        {
-            get
-            {
-                if (this.authorizationRules == null)
-                {
-                    this.authorizationRules = new AuthorizationRules();
-                }
-
-                return this.authorizationRules;
-            }
-            internal set
-            {
-                this.authorizationRules = value;
-            }
-        }
+        public AuthorizationRules AuthorizationRules { get; internal set; } = new AuthorizationRules();
 
         /// <summary>
         /// The current status of the topic (Enabled / Disabled).
@@ -153,8 +137,8 @@ namespace Microsoft.Azure.ServiceBus.Management
         public bool EnablePartitioning { get; set; } = false;
 
         /// <summary>
-        /// Defines whether ordering needs to be maintained. If true, messages sent to topic will be 
-        /// forwarded to the subscription in order. 
+        /// Defines whether ordering needs to be maintained. If true, messages sent to topic will be
+        /// forwarded to the subscription in order.
         /// </summary>
         /// <remarks>Defaults to false.</remarks>
         public bool SupportOrdering { get; set; } = false;
@@ -190,7 +174,7 @@ namespace Microsoft.Azure.ServiceBus.Management
 
         /// <summary>
         /// List of properties that were retrieved using GetTopic but are not understood by this version of client is stored here.
-        /// The list will be sent back when an already retrieved TopicDescription will be used in UpdateTopic call. 
+        /// The list will be sent back when an already retrieved TopicDescription will be used in UpdateTopic call.
         /// </summary>
         internal List<object> UnknownProperties { get; set; }
 
@@ -207,7 +191,7 @@ namespace Microsoft.Azure.ServiceBus.Management
 
         public bool Equals(TopicDescription otherDescription)
         {
-            if (otherDescription is TopicDescription other 
+            if (otherDescription is TopicDescription other
                 && this.Path.Equals(other.Path, StringComparison.OrdinalIgnoreCase)
                 && this.AutoDeleteOnIdle.Equals(other.AutoDeleteOnIdle)
                 && this.DefaultMessageTimeToLive.Equals(other.DefaultMessageTimeToLive)
@@ -218,9 +202,9 @@ namespace Microsoft.Azure.ServiceBus.Management
                 && this.RequiresDuplicateDetection.Equals(other.RequiresDuplicateDetection)
                 && this.Status.Equals(other.Status)
                 && string.Equals(this.userMetadata, other.userMetadata, StringComparison.OrdinalIgnoreCase)
-                && (this.authorizationRules != null && other.authorizationRules != null
-                    || this.authorizationRules == null && other.authorizationRules == null)
-                && (this.authorizationRules == null || this.AuthorizationRules.Equals(other.AuthorizationRules)))
+                && (this.AuthorizationRules != null && other.AuthorizationRules != null
+                    || this.AuthorizationRules == null && other.AuthorizationRules == null)
+                && (this.AuthorizationRules == null || this.AuthorizationRules.Equals(other.AuthorizationRules)))
             {
                 return true;
             }
