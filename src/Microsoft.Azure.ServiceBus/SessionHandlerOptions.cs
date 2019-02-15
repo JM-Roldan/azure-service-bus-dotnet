@@ -16,6 +16,7 @@ namespace Microsoft.Azure.ServiceBus
         int maxConcurrentSessions;
         TimeSpan messageWaitTimeout;
         TimeSpan maxAutoRenewDuration;
+        TimeSpan operationSessionTimeout;
 
         /// <summary>Initializes a new instance of the <see cref="SessionHandlerOptions" /> class.
         /// Default Values:
@@ -23,6 +24,8 @@ namespace Microsoft.Azure.ServiceBus
         ///     <see cref="AutoComplete"/> = true
         ///     <see cref="MessageWaitTimeout"/> = 1 minute
         ///     <see cref="MaxAutoRenewDuration"/> = 5 minutes
+        ///     <see cref="SessionId"/> = empty 
+        ///     <see cref="OperationSessionTimeout"/> = 1 minutes
         /// </summary>
         /// <param name="exceptionReceivedHandler">A <see cref="Func{T1, TResult}"/> that is invoked during exceptions.
         /// <see cref="ExceptionReceivedEventArgs"/> contains contextual information regarding the exception.</param>
@@ -34,6 +37,8 @@ namespace Microsoft.Azure.ServiceBus
             this.MessageWaitTimeout = TimeSpan.FromMinutes(1);
             this.MaxAutoRenewDuration = Constants.ClientPumpRenewLockTimeout;
             this.ExceptionReceivedHandler = exceptionReceivedHandler ?? throw new ArgumentNullException(nameof(exceptionReceivedHandler));
+            this.SessionId = "";
+            this.OperationSessionTimeout = TimeSpan.FromMinutes(1);
         }
 
         /// <summary>Occurs when an exception is received. Enables you to be notified of any errors encountered by the session pump.
@@ -87,6 +92,24 @@ namespace Microsoft.Azure.ServiceBus
         /// <summary>Gets or sets whether the autocomplete option of the session handler is enabled.</summary>
         /// <value>true if the autocomplete option of the session handler is enabled; otherwise, false.</value>
         public bool AutoComplete { get; set; }
+
+        /// <summary>
+        /// Gets or sets session identifier (receiver with specific session identifier)
+        /// </summary>
+        public string SessionId { get; set; }
+
+        /// <summary>Gets or sets time to wait for receiving messages.</summary>
+        /// <value>The time to wait for receiving messages.</value>
+        public TimeSpan OperationSessionTimeout
+        {
+            get => this.operationSessionTimeout;
+
+            set
+            {
+                TimeoutHelper.ThrowIfNegativeArgument(value, nameof(value));
+                this.operationSessionTimeout = value;
+            }
+        }
 
         internal bool AutoRenewLock => this.MaxAutoRenewDuration > TimeSpan.Zero;
 

@@ -31,7 +31,7 @@ namespace Microsoft.Azure.ServiceBus.UnitTests
         Task OnSessionPeekLockWithAutoCompleteTrue(string queueName, int maxConcurrentCalls)
         {
             return this.OnSessionTestAsync(queueName, maxConcurrentCalls, ReceiveMode.PeekLock, true);
-        }
+        }        
 
         [Theory]
         [MemberData(nameof(TestPermutations))]
@@ -42,11 +42,27 @@ namespace Microsoft.Azure.ServiceBus.UnitTests
         }
 
         [Theory]
+        [MemberData(nameof(TestPermutations))]
+        [DisplayTestMethodName]
+        Task OnSessionWithSessionIdentifierAndOperationTimeoutPeekLockWithAutoCompleteFalse(string queueName, int maxConcurrentCalls)
+        {
+            return this.OnSessionWithSessionAndOperationTimeoutTestAsync(queueName, maxConcurrentCalls, ReceiveMode.PeekLock, false);
+        }
+
+        [Theory]
         [MemberData(nameof(PartitionedNonPartitionedTestPermutations))]
         [DisplayTestMethodName]
         Task OnSessionReceiveDelete(string queueName, int maxConcurrentCalls)
         {
             return this.OnSessionTestAsync(queueName, maxConcurrentCalls, ReceiveMode.ReceiveAndDelete, false);
+        }
+
+        [Theory]
+        [MemberData(nameof(PartitionedNonPartitionedTestPermutations))]
+        [DisplayTestMethodName]
+        Task OnSessionWithSessionAndOperationTimeoutReceiveDelete(string queueName, int maxConcurrentCalls)
+        {
+            return this.OnSessionWithSessionAndOperationTimeoutTestAsync(queueName, maxConcurrentCalls, ReceiveMode.ReceiveAndDelete, false);
         }
 
         [Fact]
@@ -148,7 +164,7 @@ namespace Microsoft.Azure.ServiceBus.UnitTests
                     {
                         MaxConcurrentSessions = maxConcurrentCalls,
                         MessageWaitTimeout = TimeSpan.FromSeconds(5),
-                        AutoComplete = autoComplete
+                        AutoComplete = autoComplete                        
                     };
 
                 var testSessionHandler = new TestSessionHandler(
@@ -165,6 +181,47 @@ namespace Microsoft.Azure.ServiceBus.UnitTests
 
                 // Verify messages were received.
                 await testSessionHandler.VerifyRun();
+            }
+            finally
+            {
+                await queueClient.CloseAsync();
+            }
+        }
+
+        async Task OnSessionWithSessionAndOperationTimeoutTestAsync(string queueName, int maxConcurrentCalls, ReceiveMode mode, bool autoComplete)
+        {
+            TestUtility.Log($"Queue: {queueName}, MaxConcurrentCalls: {maxConcurrentCalls}, Receive Mode: {mode.ToString()}, AutoComplete: {autoComplete}");
+            var queueClient = new QueueClient(TestUtility.NamespaceConnectionString, queueName, mode);
+            try
+            {
+                var handlerOptions =
+                    new SessionHandlerOptions(ExceptionReceivedHandler)
+                    {
+                        MaxConcurrentSessions = maxConcurrentCalls,
+                        MessageWaitTimeout = TimeSpan.FromSeconds(2),
+                        AutoComplete = autoComplete,
+                        SessionId = Guid.NewGuid().ToString(),
+                        OperationSessionTimeout = TimeSpan.FromMinutes(1)
+                    };
+
+                var testSessionHandler = new TestSessionHandler(
+                    queueClient.ReceiveMode,
+                    handlerOptions,
+                    queueClient.InnerSender,
+                    queueClient.SessionPumpHost);
+
+                
+                int numberOfSession = 1;
+                int messagePerSession = 2;
+
+                // Send messages to Session first
+                await testSessionHandler.SendSessionWithSessionIdAndOperationTimeoutMessages(numberOfSession, messagePerSession);
+
+                // Register handler
+                testSessionHandler.RegisterSessionHandler(handlerOptions);
+
+                // Verify messages were received.
+                await testSessionHandler.VerifyWithSessionAndOperationTimeoutRun(numberOfSession, messagePerSession);
             }
             finally
             {
