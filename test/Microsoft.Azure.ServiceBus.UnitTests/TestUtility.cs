@@ -219,7 +219,7 @@ namespace Microsoft.Azure.ServiceBus.UnitTests
             }
         }
 
-        internal static async Task SendSessionWithSessionAndOperationTimeoutMessagesAsync(IMessageSender messageSender, SessionHandlerOptions sessionHandlerOptions, int numberOfSessions, int messagesPerSession)
+        internal static async Task SendSessionMessagesAsyncWithSpecificSessionIdentifierInHandlerOptionsAndSpecifyingNumberOfSessionAndMessagesPerSession(IMessageSender messageSender, SessionHandlerOptions sessionHandlerOptions, int numberOfSessions, int messagesPerSession)
         {
             if (numberOfSessions == 0 || messagesPerSession == 0)
             {

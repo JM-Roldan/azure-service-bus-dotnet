@@ -31,7 +31,15 @@ namespace Microsoft.Azure.ServiceBus.UnitTests
         Task OnSessionPeekLockWithAutoCompleteTrue(string queueName, int maxConcurrentCalls)
         {
             return this.OnSessionTestAsync(queueName, maxConcurrentCalls, ReceiveMode.PeekLock, true);
-        }        
+        }
+
+        [Theory]
+        [MemberData(nameof(TestPermutations))]
+        [DisplayTestMethodName]
+        Task OnOneSpecificSessionIdentifierAndOperationTimeoutPeekLockWithAutoCompleteTrue(string queueName, int maxConcurrentCalls)
+        {
+            return this.OnOneSpecificSessionIdentifierAndOperationTimeoutTestAsync(queueName, maxConcurrentCalls, ReceiveMode.PeekLock, true);
+        }
 
         [Theory]
         [MemberData(nameof(TestPermutations))]
@@ -44,9 +52,17 @@ namespace Microsoft.Azure.ServiceBus.UnitTests
         [Theory]
         [MemberData(nameof(TestPermutations))]
         [DisplayTestMethodName]
-        Task OnSessionWithSessionIdentifierAndOperationTimeoutPeekLockWithAutoCompleteFalse(string queueName, int maxConcurrentCalls)
+        Task OnOneSpecificSessionIdentifierAndOperationTimeoutPeekLockWithAutoCompleteFalse(string queueName, int maxConcurrentCalls)
         {
-            return this.OnSessionWithSessionAndOperationTimeoutTestAsync(queueName, maxConcurrentCalls, ReceiveMode.PeekLock, false);
+            return this.OnOneSpecificSessionIdentifierAndOperationTimeoutTestAsync(queueName, maxConcurrentCalls, ReceiveMode.PeekLock, false);
+        }
+
+        [Theory]
+        [MemberData(nameof(TestPermutations))]
+        [DisplayTestMethodName]
+        Task OnOneSpecificSessionIdentifierAndOperationTimeoutDifferentFromMessagesSessionPeekLockWithAutoCompleteFalse(string queueName, int maxConcurrentCalls)
+        {
+            return this.OnOneSpecificSessionIdentifierAndOperationTimeoutTestAsync(queueName, maxConcurrentCalls, ReceiveMode.PeekLock, false, false);
         }
 
         [Theory]
@@ -60,9 +76,9 @@ namespace Microsoft.Azure.ServiceBus.UnitTests
         [Theory]
         [MemberData(nameof(PartitionedNonPartitionedTestPermutations))]
         [DisplayTestMethodName]
-        Task OnSessionWithSessionAndOperationTimeoutReceiveDelete(string queueName, int maxConcurrentCalls)
+        Task OnOneSpecificSessionIdentifierAndOperationTimeoutReceiveDelete(string queueName, int maxConcurrentCalls)
         {
-            return this.OnSessionWithSessionAndOperationTimeoutTestAsync(queueName, maxConcurrentCalls, ReceiveMode.ReceiveAndDelete, false);
+            return this.OnOneSpecificSessionIdentifierAndOperationTimeoutTestAsync(queueName, maxConcurrentCalls, ReceiveMode.ReceiveAndDelete, false);
         }
 
         [Fact]
@@ -188,7 +204,7 @@ namespace Microsoft.Azure.ServiceBus.UnitTests
             }
         }
 
-        async Task OnSessionWithSessionAndOperationTimeoutTestAsync(string queueName, int maxConcurrentCalls, ReceiveMode mode, bool autoComplete)
+        async Task OnOneSpecificSessionIdentifierAndOperationTimeoutTestAsync(string queueName, int maxConcurrentCalls, ReceiveMode mode, bool autoComplete, bool messagesSameSession = true)
         {
             TestUtility.Log($"Queue: {queueName}, MaxConcurrentCalls: {maxConcurrentCalls}, Receive Mode: {mode.ToString()}, AutoComplete: {autoComplete}");
             var queueClient = new QueueClient(TestUtility.NamespaceConnectionString, queueName, mode);
@@ -210,24 +226,41 @@ namespace Microsoft.Azure.ServiceBus.UnitTests
                     queueClient.InnerSender,
                     queueClient.SessionPumpHost);
 
-                
-                int numberOfSession = 1;
-                int messagePerSession = 2;
 
-                // Send messages to Session first
-                await testSessionHandler.SendSessionWithSessionIdAndOperationTimeoutMessages(numberOfSession, messagePerSession);
+                TestUtility.Log($"SessionId: {handlerOptions.SessionId}");
 
+                var numberOfSession = 1;
+                var messagePerSession = 2;
+
+                // Send messages to Session
+                if (messagesSameSession)
+                {                    
+                    await testSessionHandler.SendSessionMessagesWithSpecificSessionIdentifierInHandlerOptionsAndSpecifyingNumberOfSessionsAndMessagesPerSession(numberOfSession, messagePerSession);
+                }
+                else
+                {
+                    await testSessionHandler.SendSessionMessagesSpecifyingNumberOfSessionsAndMessagesPerSession(numberOfSession, messagePerSession);
+                }
+               
                 // Register handler
                 testSessionHandler.RegisterSessionHandler(handlerOptions);
 
                 // Verify messages were received.
-                await testSessionHandler.VerifyWithSessionAndOperationTimeoutRun(numberOfSession, messagePerSession);
+                if (messagesSameSession)
+                {                    
+                    await testSessionHandler.VerifyRunSpecificSessionIdentifierAndOperationTimeoutAndSpecifyingNumberOfSessionAndMessagesPerSession(numberOfSession, messagePerSession);
+                }
+                else
+                {
+                    await testSessionHandler.VerifyRunMessagesNotArriveSpecifyingNumberOfSessionAndMessagesPerSession(numberOfSession, messagePerSession);
+                }
+               
             }
             finally
             {
                 await queueClient.CloseAsync();
             }
-        }
+        }        
 
         Task ExceptionReceivedHandler(ExceptionReceivedEventArgs eventArgs)
         {

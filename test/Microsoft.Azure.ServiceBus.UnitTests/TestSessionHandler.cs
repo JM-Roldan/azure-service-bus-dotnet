@@ -48,9 +48,14 @@ namespace Microsoft.Azure.ServiceBus.UnitTests
             await TestUtility.SendSessionMessagesAsync(this.sender, NumberOfSessions, MessagesPerSession);
         }
 
-        public async Task SendSessionWithSessionIdAndOperationTimeoutMessages(int numberOfSessions, int messagesPerSession)
+        public async Task SendSessionMessagesWithSpecificSessionIdentifierInHandlerOptionsAndSpecifyingNumberOfSessionsAndMessagesPerSession(int numberOfSessions, int messagesPerSession)
         {
-            await TestUtility.SendSessionWithSessionAndOperationTimeoutMessagesAsync(this.sender, this.sessionHandlerOptions, numberOfSessions, messagesPerSession);
+            await TestUtility.SendSessionMessagesAsyncWithSpecificSessionIdentifierInHandlerOptionsAndSpecifyingNumberOfSessionAndMessagesPerSession(this.sender, this.sessionHandlerOptions, numberOfSessions, messagesPerSession);
+        }
+
+        public async Task SendSessionMessagesSpecifyingNumberOfSessionsAndMessagesPerSession(int numberOfSessions, int messagesPerSession)
+        {
+            await TestUtility.SendSessionMessagesAsync(this.sender, numberOfSessions, messagesPerSession);
         }
 
         public async Task OnSessionHandler(IMessageSession session, Message message, CancellationToken token)
@@ -102,7 +107,7 @@ namespace Microsoft.Azure.ServiceBus.UnitTests
             Assert.True(this.totalMessageCount == MessagesPerSession * NumberOfSessions);
         }
 
-        public async Task VerifyWithSessionAndOperationTimeoutRun(int numberOfSession, int messagesPerSession)
+        public async Task VerifyRunSpecificSessionIdentifierAndOperationTimeoutAndSpecifyingNumberOfSessionAndMessagesPerSession(int numberOfSession, int messagesPerSession)
         {
             // Wait for the OnMessage Tasks to finish
             var stopwatch = Stopwatch.StartNew();
@@ -123,6 +128,29 @@ namespace Microsoft.Azure.ServiceBus.UnitTests
 
             Assert.True(this.sessionMessageMap.Keys.Count == numberOfSession);
             Assert.True(this.totalMessageCount == messagesPerSession * numberOfSession);
+        }
+
+        public async Task VerifyRunMessagesNotArriveSpecifyingNumberOfSessionAndMessagesPerSession(int numberOfSession, int messagesPerSession)
+        {
+            // Wait for the OnMessage Tasks to finish
+            var stopwatch = Stopwatch.StartNew();
+            while (stopwatch.Elapsed.TotalSeconds <= 180)
+            {
+                if (this.totalMessageCount == messagesPerSession * numberOfSession)
+                {
+                    TestUtility.Log($"All '{this.totalMessageCount}' messages Received.");
+                    break;
+                }
+                await Task.Delay(TimeSpan.FromSeconds(5));
+            }
+
+            foreach (KeyValuePair<string, int> keyValuePair in this.sessionMessageMap)
+            {
+                TestUtility.Log($"Session: {keyValuePair.Key}, Messages Received in this Session: {keyValuePair.Value}");
+            }
+
+            Assert.True(this.sessionMessageMap.Keys.Count == 0);
+            Assert.True(this.totalMessageCount == 0);
         }
 
         public void ClearData()
