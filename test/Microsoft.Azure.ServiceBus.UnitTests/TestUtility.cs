@@ -219,6 +219,31 @@ namespace Microsoft.Azure.ServiceBus.UnitTests
             }
         }
 
+        internal static async Task SendSessionMessagesAsyncWithSpecificSessionIdentifierInHandlerOptionsAndSpecifyingNumberOfSessionAndMessagesPerSession(IMessageSender messageSender, SessionHandlerOptions sessionHandlerOptions, int numberOfSessions, int messagesPerSession)
+        {
+            if (numberOfSessions == 0 || messagesPerSession == 0)
+            {
+                await Task.FromResult(false);
+            }
+
+            for (var i = 0; i < numberOfSessions; i++)
+            {
+                var messagesToSend = new List<Message>();
+                var sessionId = sessionHandlerOptions.SessionId;
+                for (var j = 0; j < messagesPerSession; j++)
+                {
+                    var message = new Message(Encoding.UTF8.GetBytes("test" + j));
+                    message.Label = "test" + j;
+                    message.SessionId = sessionId;
+                    messagesToSend.Add(message);
+                }
+
+                await messageSender.SendAsync(messagesToSend);
+            }
+
+            Log($"Sent {messagesPerSession} messages each for {numberOfSessions} sessions.");
+        }        
+
         internal static string GetString(this byte[] bytes)
         {
             return Encoding.ASCII.GetString(bytes);

@@ -88,7 +88,7 @@ namespace Microsoft.Azure.ServiceBus
                 renewLockCancellationTokenSource?.Cancel();
                 renewLockCancellationTokenSource?.Dispose();
 			}
-            catch (ObjectDisposedException)
+            catch (ObjectDisposedException) 
             {
 				// Ignore this race.
             }
@@ -163,7 +163,18 @@ namespace Microsoft.Azure.ServiceBus
                     concurrentSessionSemaphoreAcquired = true;
 
                     await this.maxPendingAcceptSessionsSemaphoreSlim.WaitAsync(this.pumpCancellationToken).ConfigureAwait(false);
-                    var session = await this.client.AcceptMessageSessionAsync().ConfigureAwait(false);
+
+                    IMessageSession session;
+                    if (string.IsNullOrEmpty(this.sessionHandlerOptions.SessionId))
+                    {
+                        session = await this.client.AcceptMessageSessionAsync().ConfigureAwait(false);
+                    }
+                    else
+                    {
+                        TimeoutHelper.ThrowIfNegativeArgument(this.sessionHandlerOptions.OperationSessionTimeout);
+                        session = await this.client.AcceptMessageSessionAsync(this.sessionHandlerOptions.SessionId, this.sessionHandlerOptions.OperationSessionTimeout).ConfigureAwait(false);
+                    }
+                        
                     if (session == null)
                     {
                         await Task.Delay(Constants.NoMessageBackoffTimeSpan, this.pumpCancellationToken).ConfigureAwait(false);
